@@ -1,5 +1,7 @@
 # Datastar Simulator
 
+[![DEMO](https://img.shields.io/badge/DEMO-live-2ea44f?style=for-the-badge)](https://romshark.github.io/datastar-simulator/)
+
 A client-side simulator for [Datastar](https://data-star.dev) backends intercepts `window.fetch` for routes you register and answers them locally with the same wire formats Datastar's action plugins accept — no server required, fully CDN-hostable.
 
 ## Why
