@@ -1,0 +1,306 @@
+:root {
+    color-scheme: light dark;
+}
+
+body {
+    font: 15px/1.5 system-ui, sans-serif;
+    max-width: 1024px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+@media (min-width: 800px) {
+    .layout {
+        grid-template-columns: 18rem 1fr;
+    }
+}
+
+section {
+    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+}
+
+h1 {
+    font-size: 1.5rem;
+    margin: 0 0 0.5rem;
+}
+
+h2 {
+    font-size: 1.1rem;
+    margin: 0 0 0.25rem;
+}
+
+summary {
+    cursor: pointer;
+}
+
+summary > h2 {
+    display: inline-block;
+    margin: 0;
+}
+
+button {
+    font: inherit;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+*:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+input:not([type=checkbox]):not([type=radio]):not([type=range]) {
+    font: inherit;
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #888;
+}
+
+input[type=number] {
+    width: 5rem;
+}
+
+select {
+    font: inherit;
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #888;
+    background: Canvas;
+}
+
+.retry-settings {
+    margin: 0.5rem 0 1rem;
+}
+
+.retry-settings > summary {
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
+}
+
+.retry-settings .row > label {
+    width: 5rem;
+}
+
+code,
+.code {
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 0.9em;
+    font-weight: lighter;
+    background: color-mix(in srgb, currentColor 15%, transparent);
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+}
+
+#settings {
+    position: sticky;
+    top: 1rem;
+    background-color: Canvas;
+    z-index: 10;
+    padding: 1rem;
+    box-shadow: 0px 10px 15px -3px rgba(0,0,0,0.1);
+}
+
+.muted {
+    opacity: 0.7;
+    font-size: 0.85em;
+    padding: 0;
+    margin: 0;
+    margin-bottom: 1rem;
+}
+
+.error {
+    color: #c33;
+}
+
+.row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+
+    & input[type=range] {
+        flex: 1;
+    }
+    
+    &+.row {
+        margin-top: 0.5rem;
+    }
+}
+
+
+.slider-label {
+    width: 1.8rem;
+}
+
+.slider-value {
+    width: 4rem;
+    text-align: right;
+}
+
+progress {
+    width: 100%;
+    height: 0.6rem;
+}
+
+ul {
+    padding-left: 1.25rem;
+    margin: 0.5rem 0;
+}
+
+li {
+    &.done {
+        color: #2a7;
+        font-weight: 600;
+    }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 220ms;
+    animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+#log li,
+#live-log li {
+    animation: log-slide-in 220ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+#live-log {
+    height: 12rem;
+    overflow-y: auto;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.5rem 0.5rem 2rem;
+    background: color-mix(in srgb, currentColor 5%, transparent);
+    border-radius: 4px;
+}
+
+@keyframes log-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+}
+
+.item {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.25rem 0;
+}
+
+.streaming-stage {
+    position: relative;
+    margin-top: 0.5rem;
+}
+
+.stream-bar {
+    position: absolute;
+    top: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+    animation: overlay-fade-in 150ms 250ms ease-out forwards;
+    
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, transparent, currentColor, transparent);
+        animation: stream-slide 1.2s ease-in-out infinite;
+    }
+}
+
+
+@keyframes stream-slide {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.counter-stage {
+    position: relative;
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+}
+
+.patch-stage {
+    position: relative;
+    border: 1px dashed color-mix(in srgb, currentColor 30%, transparent);
+    padding: 1rem;
+    margin-top: 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.cancel-request-button {
+    margin-bottom: 1rem;
+}
+
+.patch-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, Canvas 65%, transparent);
+    border-radius: inherit;
+    backdrop-filter: blur(1px);
+    opacity: 0;
+    animation: overlay-fade-in 150ms 250ms ease-out forwards;
+}
+
+@keyframes overlay-fade-in {
+    to { opacity: 1; }
+}
+
+.spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 3px solid color-mix(in srgb, currentColor 20%, transparent);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.spinner-sm {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-width: 1px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.patch-target {
+    background: color-mix(in srgb, currentColor 10%, transparent);
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.patch-target p {
+    margin: 0.25rem 0;
+}
+
+.sibling {
+    background: color-mix(in srgb, #2a7 25%, transparent);
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-style: italic;
+    margin: 0.25rem 0;
+}

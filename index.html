@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Datastar Simulator demo</title>
+    <link rel="stylesheet" href="./style.css">
+    <script type="module" src="./index.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.1/bundles/datastar.js"></script>
+</head>
+
+<body data-signals="{
+    count: 0,
+    name: '',
+    progress: 0,
+    burst_n: 10,
+    _latency: true,
+    _latency_min: 50,
+    _latency_max: 200,
+    _unreachable: false,
+    _server_error: false,
+    _access_log: false
+}" data-effect="
+    if ($_latency_min > $_latency_max) $_latency_max = $_latency_min;
+    sim.setLatency($_latency ? $_latency_min : 0, $_latency ? $_latency_max : 0);
+    sim.setUnreachable($_unreachable);
+    sim.setErrorResponse($_server_error);
+    sim.setAccessLog($_access_log);
+">
+
+    <h1>Datastar Server Simulator</h1>
+    <p class="muted">
+        Every request below goes through real <a target="_blank" href="https://data-star.dev">Datastar v1.0.1</a>.
+        The script <code>&lt;script&gt; type="module" src="./index.js">&lt;/script&gt;</code> intercepts <code>window.fetch</code> for <code>/sim/*</code> URLs and answers
+        locally with the same SSE wire format a server would send. Simply removing that
+        script tag will let those requests through to the real server if any.
+    </p>
+
+    <div class="layout">
+        <aside>
+            <!-- Settings -->
+            <section id="settings">
+                <details open>
+                    <summary>
+                        <h2>Settings</h2>
+                    </summary>
+                    <div class="row">
+                        <label><input type="checkbox" data-bind:_latency>
+                            simulate latency
+                            <p class="muted">
+                                Random delay added to the request,
+                                the response, and each SSE frame.
+                            </p>
+                        </label>
+                    </div>
+                    <div class="row">
+                        <label class="slider-label">min</label>
+                        <input type="range" min="0" max="2000" step="10" data-bind:_latency_min
+                            data-attr:disabled="!$_latency">
+                        <span class="slider-value" data-text="$_latency_min + ' ms'"></span>
+                    </div>
+                    <div class="row">
+                        <label class="slider-label">max</label>
+                        <input type="range" max="2000" step="10" data-bind:_latency_max data-attr:disabled="!$_latency">
+                        <span class="slider-value" data-text="$_latency_max + ' ms'"></span>
+                    </div>
+                    <div class="row">
+                        <label><input type="checkbox" data-bind:_unreachable>
+                            server unreachable
+                            <p class="muted">
+                                New requests reject with <code>TypeError:
+                                Failed to fetch</code>
+                            </p>
+                        </label>
+                    </div>
+                    <div class="row">
+                        <label><input type="checkbox" data-bind:_server_error>
+                            server error response
+                            <p class="muted">
+                                New requests get <code>HTTP 500</code> instead
+                                of running the handler
+                            </p>
+                        </label>
+                    </div>
+                    <div class="row">
+                        <label><input type="checkbox" data-bind:_access_log>
+                            console access log
+                        </label>
+                    </div>
+                </details>
+            </section>
+        </aside>
+        <main>
+            <!-- Examples -->
+            <section>
+                <h2>Signal patching <code>@post('/sim/increment')</code></h2>
+                <p class="muted">
+                    Server reads <code>$count</code>, returns <code>count + 1</code> as
+                    a signal patch.
+                </p>
+                <div class="row">
+                    <button data-on:click="@post('/sim/increment')" data-indicator:counting>+1</button>
+                    <button data-on:click="@post('/sim/reset')" data-indicator:counting>reset</button>
+                    <span class="counter-stage">
+                        <span class="patch-overlay" data-show="$counting">
+                            <span class="spinner spinner-sm"></span>
+                        </span>
+                        count: <strong data-text="$count"></strong>
+                    </span>
+                </div>
+            </section>
+
+            <section>
+                <h2>Element patching <code>@post('/sim/greet')</code></h2>
+                <p class="muted">
+                    Server reads <code>$name</code>, validates, and
+                    morphs the result HTML into <code>#greeting</code>.
+                </p>
+                <div class="row">
+                    <input data-bind:name placeholder="your name">
+                    <button data-on:click="@post('/sim/greet')">greet me</button>
+                </div>
+                <div id="greeting"></div>
+            </section>
+
+            <section>
+                <h2>Streamed patches <code>@post('/sim/process')</code></h2>
+                <p class="muted">
+                    On each run the handler clears <code>#log</code>, then over a few
+                    seconds streams <code>$progress</code> signal patches (driving the
+                    <code>&lt;progress&gt;</code> bar) interleaved with
+                    <code>&lt;li&gt;</code> appends, and finishes with a
+                    <code>complete.</code> marker.
+                    <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/API/View_Transition_API">
+                        View transitions
+                    </a> are used for smoother patching.
+                </p>
+                <div class="row">
+                    <button data-on:click="@post('/sim/process')" data-indicator:processing
+                        data-attr:disabled="$processing">
+                        run
+                    </button>
+                </div>
+                <div class="streaming-stage">
+                    <div class="stream-bar" data-show="$processing"></div>
+                    <div class="row">
+                        <progress data-attr:value="$progress" value="0" max="100"></progress>
+                        <span data-text="$progress + '%'"></span>
+                    </div>
+                    <ul id="log"></ul>
+                </div>
+            </section>
+
+            <section data-signals="{ _paused: true }"
+                data-effect="setLiveLogPaused($_paused)">
+                <h2>Continuous SSE patching <code>@get('/sim/log')</code></h2>
+                <p class="muted">
+                    Opened on page load via <code>data-init</code>; a wall-clock
+                    timer prepends a new <code>&lt;li&gt;</code> to
+                    <code>#live-log</code> every second. The counter is
+                    independent of the SSE — it keeps ticking when the stream
+                    dies or is paused, so resuming after a pause shows the gap
+                    as skipped entry numbers. The buttons below don't open their
+                    own streams — their patches ride the open SSE connection.
+                </p>
+                <div class="row">
+                    <label><input type="checkbox" data-bind:_paused>
+                        paused
+                    </label>
+                    <button data-on:click="document.querySelector('#live-log').replaceChildren()">
+                        clear
+                    </button>
+                    <input type="number" min="1" max="500" data-bind:burst_n>
+                    <button data-on:click="@post('/sim/log/burst')">burst</button>
+                </div>
+                <ul id="live-log" data-init="@get('/sim/log')"></ul>
+            </section>
+
+            <section data-signals="{
+                _retry: 'auto',
+                _retry_interval: 1000,
+                _retry_scaler: 2,
+                _retry_max_wait_s: 30,
+                _retry_max_wait: 30000,
+                _retry_max_count: 10,
+                _retry_opts: { contentType: 'json' },
+                _last_status: 0,
+                _abort_ctrl: null
+            }" data-effect="
+                $_retry_max_wait = $_retry_max_wait_s * 1000;
+                $_retry_opts = {
+                    contentType: 'json',
+                    retry: $_retry,
+                    retryInterval: $_retry_interval,
+                    retryScaler: $_retry_scaler,
+                    retryMaxWait: $_retry_max_wait,
+                    retryMaxCount: $_retry_max_count
+                }
+            " data-on:datastar-fetch="
+                let raw = evt.detail.argsRaw || {};
+                if (evt.detail.type === 'started') $_last_status = 0;
+                if (raw.status) $_last_status = parseInt(raw.status);
+                if (evt.detail.type === 'retries-failed') {
+                    alert($_last_status >= 400
+                        ? 'Something is wrong, please try again later.'
+                        : 'Server not reachable, please try again later.');
+                }
+            " data-computed:_retry_is_never="$_retry === 'never'">
+                <h2>Patch modes <code>@post('/sim/patch/:mode')</code></h2>
+                <p class="muted">
+                    All eight <code>datastar-patch-elements</code> modes against the same
+                    <code>#patch-target</code>. Each button uses
+                    <code>data-indicator:patching</code>, so <code>$patching</code> is
+                    <code>true</code> while a request is in flight — bump the latency
+                    slider above to see the indicator. The retry options below are
+                    forwarded to <code>@post(url, opts)</code>; toggle "server
+                    unreachable" to watch Datastar back off and give up eventually.
+                </p>
+                <details class="retry-settings">
+                    <summary>retry settings</summary>
+                    <div class="row">
+                        <label>retry</label>
+                        <select data-bind:_retry>
+                            <option value="auto">auto</option>
+                            <option value="error">error</option>
+                            <option value="always">always</option>
+                            <option value="never">never</option>
+                        </select>
+                    </div>
+                    <p class="muted" data-show="$_retry === 'always'">
+                        ℹ️ <code>always</code> retries on every non-204 response,
+                        including successes — meant for polling endpoints, not
+                        one-shot actions like these. Picking it here will replay
+                        the same patch up to <code>retryMaxCount</code> times
+                        even after the server recovers.
+                    </p>
+                    <div class="row">
+                        <label>interval</label>
+                        <input type="range" min="0" max="5000" step="100" data-bind:_retry_interval
+                            data-attr:disabled="$_retry_is_never">
+                        <span class="slider-value" data-text="$_retry_interval + ' ms'"></span>
+                    </div>
+                    <div class="row">
+                        <label>scaler</label>
+                        <input type="range" min="1" max="5" step="0.1" data-bind:_retry_scaler
+                            data-attr:disabled="$_retry_is_never">
+                        <span class="slider-value" data-text="$_retry_scaler + '×'"></span>
+                    </div>
+                    <div class="row">
+                        <label>max wait</label>
+                        <input type="range" min="0" max="60" step="1" data-bind:_retry_max_wait_s
+                            data-attr:disabled="$_retry_is_never">
+                        <span class="slider-value" data-text="$_retry_max_wait_s + ' s'"></span>
+                    </div>
+                    <div class="row">
+                        <label>max count</label>
+                        <input type="range" min="0" max="20" step="1" data-bind:_retry_max_count
+                            data-attr:disabled="$_retry_is_never">
+                        <span class="slider-value" data-text="$_retry_max_count"></span>
+                    </div>
+                </details>
+                <div class="row">
+                    <button data-on:click="$_abort_ctrl = new AbortController(); @post('/sim/patch/outer', {...$_retry_opts, requestCancellation: $_abort_ctrl})" data-indicator:patching>
+                        outer
+                    </button>
+                    <button data-on:click="$_abort_ctrl = new AbortController(); @post('/sim/patch/inner', {...$_retry_opts, requestCancellation: $_abort_ctrl})" data-indicator:patching>
+                        inner
+                    </button>
+                    <button data-on:click="$_abort_ctrl = new AbortController(); @post('/sim/patch/replace', {...$_retry_opts, requestCancellation: $_abort_ctrl})" data-indicator:patching>
+                        replace
+                    </button>
+                    <button data-on:click="$_abort_ctrl = new AbortController(); @post('/sim/patch/prepend', {...$_retry_opts, requestCancellation: $_abort_ctrl})" data-indicator:patching>
+                        prepend
+                    </button>
+                    <button data-on:click="$_abort_ctrl = new AbortController(); @post('/sim/patch/append', {...$_retry_opts, requestCancellation: $_abort_ctrl})" data-indicator:patching>
+                        append
+                    </button>
+                    <button data-on:click="$_abort_ctrl = new AbortController(); @post('/sim/patch/before', {...$_retry_opts, requestCancellation: $_abort_ctrl})" data-indicator:patching>
+                        before
+                    </button>
+                    <button data-on:click="$_abort_ctrl = new AbortController(); @post('/sim/patch/after', {...$_retry_opts, requestCancellation: $_abort_ctrl})" data-indicator:patching>
+                        after
+                    </button>
+                    <button data-on:click="$_abort_ctrl = new AbortController(); @post('/sim/patch/reset', {...$_retry_opts, requestCancellation: $_abort_ctrl})" data-indicator:patching>
+                        reset
+                    </button>
+                </div>
+                <div id="patch-stage" class="patch-stage">
+                    <div class="patch-overlay" data-show="$patching">
+                        <div class="spinner"></div>
+                    </div>
+                    <div id="patch-target" class="patch-target">
+                        <p>existing child</p>
+                    </div>
+                </div>
+                <button data-attr:disabled="!$patching" data-on:click="$_abort_ctrl && $_abort_ctrl.abort()" class="cancel-request-button">
+                    cancel inflight request
+                </button>
+                <p class="muted">
+                    ℹ️ Enable "server unreachable" setting to see retry in action.
+                </p>
+            </section>
+
+            <section>
+                <h2>Element removal <code>@delete('/sim/items/:id')</code></h2>
+                <p class="muted">
+                    Each button hits a unique URL;
+                    the handler reads <code>:id</code> from the path and removes
+                    <code>#item-{id}</code> via <code>mode: 'remove'</code>.
+                    Each delete button uses its own
+                    <code>data-indicator:deleting{id}</code>
+                    so an in-flight request shows a per-button spinner.
+                </p>
+                <div class="row">
+                    <button data-on:click="@post('/sim/items/reset')">reset</button>
+                </div>
+                <div id="items">
+                    <div id="item-1" class="item">
+                        <span>item one</span>
+                        <button data-on:click="@delete('/sim/items/1')" data-indicator:deleting1
+                            data-attr:disabled="$deleting1">
+                            delete
+                            <span class="spinner spinner-sm" data-show="$deleting1"></span>
+                        </button>
+                    </div>
+                    <div id="item-2" class="item">
+                        <span>item two</span>
+                        <button data-on:click="@delete('/sim/items/2')" data-indicator:deleting2
+                            data-attr:disabled="$deleting2">
+                            delete
+                            <span class="spinner spinner-sm" data-show="$deleting2"></span>
+                        </button>
+                    </div>
+                    <div id="item-3" class="item">
+                        <span>item three</span>
+                        <button data-on:click="@delete('/sim/items/3')" data-indicator:deleting3
+                            data-attr:disabled="$deleting3">
+                            delete
+                            <span class="spinner spinner-sm" data-show="$deleting3"></span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>Non-SSE responses <code>@post('/sim/non-sse/:type')</code></h2>
+                <p class="muted">
+                    Datastar accepts four response content-types from action plugins.
+                    Besides <code>text/event-stream</code>, the server can return
+                    <code>text/html</code> (DOM patch via <code>datastar-*</code> headers),
+                    <code>application/json</code> (signal patch),
+                    or <code>text/javascript</code> (script execution).
+                    Each handler below returns one of those shapes instead of streaming SSE.
+                </p>
+                <div class="row">
+                    <button data-on:click="@post('/sim/non-sse/html')">
+                        text/html
+                    </button>
+                    <button data-on:click="@post('/sim/non-sse/json')">
+                        application/json
+                    </button>
+                    <button data-on:click="@post('/sim/non-sse/script')">
+                        text/javascript
+                    </button>
+                </div>
+                <ul>
+                    <li>HTML response slot: <span id="non-sse-out">—</span></li>
+                    <li>
+                        JSON-patched signal:
+                        <strong data-text="$nonSseJson || '—'"></strong>
+                    </li>
+                    <li>
+                        Script result:
+                        <strong id="non-sse-script">—</strong>
+                        (also logs to console)
+                    </li>
+                </ul>
+            </section>
+            <footer class="muted">
+                Made by Roman Scharkov
+                <br>
+                <a target="_blank" href="https://github.com/romshark/datastar-simulator">
+                    github.com/romshark/datastar-simulator
+                </a>
+            </footer>
+        </main>
+    </div>
+
+</body>
+
+</html>
