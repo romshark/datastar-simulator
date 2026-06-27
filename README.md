@@ -12,7 +12,7 @@ I wanted to prototype and demo Datastar-friendly UI web components but share the
 
 ```html
 <script type="module" src="./handlers.js"></script>
-<script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.1/bundles/datastar.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.2/bundles/datastar.js"></script>
 ```
 
 ```js
